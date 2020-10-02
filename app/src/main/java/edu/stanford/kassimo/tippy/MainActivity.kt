@@ -1,6 +1,8 @@
 package edu.stanford.kassimo.tippy
 
 import android.animation.ArgbEvaluator
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.Editable
@@ -12,21 +14,30 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 private const val TAG = "MainActivity"
 private const val INITIAL_TIP_PERCENT = 15
+private const val KEY_LAST_TIP_PERCENT = "kLastTipPercent"
 
 class MainActivity : AppCompatActivity() {
+    var prefs: SharedPreferences? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        seekBarTip.progress = INITIAL_TIP_PERCENT
-        tvTipPercent.text = "$INITIAL_TIP_PERCENT%"
-        updateTipDescription(INITIAL_TIP_PERCENT)
+        init()
+
+        val savedTipPercent = loadLastTipPercent()
+        seekBarTip.progress = savedTipPercent
+        tvTipPercent.text = "$savedTipPercent%"
+        updateTipDescription(savedTipPercent)
+        updateSeekBarTipProgressColor(savedTipPercent)
         seekBarTip.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 Log.i(TAG, "onProgressChanged $progress")
                 tvTipPercent.text = "$progress%"
                 updateTipDescription(progress)
+                updateSeekBarTipProgressColor(progress)
                 computeTipAndTotal()
+                storeLastTipPercent(progress)
             }
 
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -44,6 +55,37 @@ class MainActivity : AppCompatActivity() {
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+    }
+
+    private fun init() {
+        if (prefs == null) {
+            prefs = getSharedPreferences("Setting", Context.MODE_PRIVATE)
+        }
+    }
+
+    private fun loadLastTipPercent(): Int {
+        init()
+        return try {
+            prefs?.getInt(KEY_LAST_TIP_PERCENT, INITIAL_TIP_PERCENT) ?: INITIAL_TIP_PERCENT
+        } catch (e: ClassCastException) {
+            INITIAL_TIP_PERCENT
+        }
+    }
+
+    private fun storeLastTipPercent(tipPercent: Int) {
+        init()
+        val editor = prefs!!.edit()
+        editor.putInt(KEY_LAST_TIP_PERCENT, tipPercent)
+        editor.apply()
+    }
+
+    private fun updateSeekBarTipProgressColor(tipPercent: Int) {
+        val color = ArgbEvaluator().evaluate(
+            tipPercent.toFloat() / seekBarTip.max,
+            ContextCompat.getColor(this, R.color.colorWorstTip),
+            ContextCompat.getColor(this, R.color.colorBestTip)
+        ) as Int
+        seekBarTip.progressDrawable.setTint(color)
     }
 
     private fun updateTipDescription(tipPercent: Int) {
