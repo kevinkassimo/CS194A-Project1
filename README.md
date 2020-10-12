@@ -28,7 +28,7 @@ Here's a walkthrough of implemented user stories:
 
 ## Notes
 
-Describe any challenges encountered while building the app.
+This project went pretty smooth for me. I wish I could have did more extensions, but was too busy this week...
 
 ## License
 
